@@ -16,6 +16,10 @@
   (:method (event-loop)
     (declare (ignore event-loop))))
 
+(defgeneric cleanup (event-loop)
+  (:method (event-loop)
+    (declare (ignore event-loop))))
+
 (defgeneric queue (event-loop))
 
 (defgeneric register-finish-cb (cb event-loop))
@@ -24,16 +28,19 @@
 
 (defparameter *task-depth* 10)
 
+(defmacro until-finished (finished-var &body body)
+  `(loop until ,finished-var do
+         ,@body))
+
 (defun run-loop (event-loop)
   (let ((finished nil))
     (register-finish-cb (lambda ()
                           (setf finished t))
                         event-loop)
     (prepare-loop event-loop)
-    (loop
-      until finished
-      do
-         (tick event-loop))))
+    (unwind-protect (until-finished finished
+                      (tick event-loop))
+      (cleanup event-loop))))
 
 (defun wait-for-promise (promise)
   (let* ((result-queue (make-instance 'chanl:bounded-channel)))

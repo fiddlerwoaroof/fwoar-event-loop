@@ -6,4 +6,5 @@
    #:run-loop
    #:wait-for-promise
    #:prepare-loop
-   #:register-finish-cb))
+   #:register-finish-cb
+   #:cleanup))
