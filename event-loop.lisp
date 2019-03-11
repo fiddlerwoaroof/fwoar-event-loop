@@ -22,9 +22,12 @@
 
 (defgeneric queue (event-loop))
 
-(defgeneric register-finish-cb (cb event-loop))
+(defgeneric (setf finish-cb) (cb event-loop))
+(defgeneric finish-cb (event-loop))
 
-(defgeneric tick (event-loop))
+(defgeneric tick (event-loop)
+  (:method :around (event-loop)
+    (call-next-method)))
 
 (defparameter *task-depth* 10)
 
@@ -34,12 +37,14 @@
 
 (defun run-loop (event-loop)
   (let ((finished nil))
-    (register-finish-cb (lambda ()
-                          (setf finished t))
-                        event-loop)
+    (setf (finish-cb event-loop)
+          (lambda ()
+            (setf finished t)))
     (prepare-loop event-loop)
     (unwind-protect (until-finished finished
-                      (tick event-loop))
+                      (with-simple-restart (continue "continue event loop")
+                        (tick event-loop)))
+      (format t "unwinding...")
       (cleanup event-loop))))
 
 (defun wait-for-promise (promise)
